@@ -1,0 +1,150 @@
+name: Publish Fotor for OpenCode to npm
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact committed package version
+        required: true
+        type: string
+      channel:
+        description: next from release/test; latest from tagged main
+        required: true
+        type: choice
+        options:
+          - next
+          - latest
+      mode:
+        description: Build an artifact only, or publish after environment approval
+        required: true
+        type: choice
+        default: build-only
+        options:
+          - build-only
+          - publish
+permissions:
+  contents: read
+concurrency:
+  group: fotor-opencode-npm-publication
+  cancel-in-progress: false
+env:
+  VERSION: ${{ inputs.version }}
+  CHANNEL: ${{ inputs.channel }}
+  MODE: ${{ inputs.mode }}
+  # OpenCode has no stable npm baseline yet. Unexpected bootstrap tags stop publication.
+  # Change this value only through a reviewed decision after registry verification.
+  EXPECTED_LATEST: absent
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      publication-state-sha256: ${{ steps.state.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.17.0
+          package-manager-cache: false
+      - name: Pin npm
+        run: npm install --global npm@11.21.1 --ignore-scripts --no-audit --no-fund
+      - name: Verify publication selection
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/release-gate.mjs preflight "$VERSION" "$CHANNEL"
+      - name: Build and verify the OpenCode npm artifact
+        run: |
+          mkdir "$RUNNER_TEMP/fotor-snapshot"
+          git archive "$GITHUB_SHA" | tar -x -C "$RUNNER_TEMP/fotor-snapshot"
+          node .github/scripts/pack-npm.mjs --input "$RUNNER_TEMP/fotor-snapshot" --output "$RUNNER_TEMP/npm-output" --report "$RUNNER_TEMP/npm-report.json" --source "$GITHUB_SHA"
+          mkdir "$RUNNER_TEMP/npm-artifact"
+          cp "$RUNNER_TEMP/npm-output/"*.tgz "$RUNNER_TEMP/npm-artifact/"
+          cp "$RUNNER_TEMP/npm-report.json" "$RUNNER_TEMP/npm-artifact/"
+      - name: Bind the built artifact and channel baseline
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node .github/scripts/release-gate.mjs preflight "$VERSION" "$CHANNEL" "$RUNNER_TEMP/npm-artifact" --state "$RUNNER_TEMP/publication-state.json"
+          printf 'sha256=%s\n' "$(sha256sum "$RUNNER_TEMP/publication-state.json" | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fotor-publication-state
+          path: ${{ runner.temp }}/publication-state.json
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fotor-npm
+          path: ${{ runner.temp }}/npm-artifact/
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    if: ${{ inputs.mode == 'publish' }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: npm-publish
+    env:
+      FOTOR_PUBLICATION_STATE_SHA256: ${{ needs.build.outputs.publication-state-sha256 }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.17.0
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+      - run: npm install --global npm@11.21.1 --ignore-scripts --no-audit --no-fund
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: fotor-npm
+          path: ${{ runner.temp }}/npm-artifact
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: fotor-publication-state
+          path: ${{ runner.temp }}/publication-state
+      - name: Recheck source, version availability and artifact
+        id: recheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/release-gate.mjs preflight "$VERSION" "$CHANNEL" "$RUNNER_TEMP/npm-artifact" --state "$RUNNER_TEMP/publication-state/publication-state.json"
+      - name: Publish the verified tarball with OIDC
+        id: npm_publish
+        continue-on-error: true
+        run: |
+          set +e
+          npm publish "$RUNNER_TEMP/npm-artifact/"*.tgz --access public --tag "$CHANNEL" --provenance --ignore-scripts 2>&1 | tee "$RUNNER_TEMP/npm-publish.log"
+          result=${PIPESTATUS[0]}
+          error_code=$(sed -nE 's/^npm (error|ERR!) code (E401|E403|EOTP|ENEEDAUTH)$/\2/p' "$RUNNER_TEMP/npm-publish.log" | head -n 1)
+          printf 'exit_code=%s\nerror_code=%s\n' "$result" "$error_code" >> "$GITHUB_OUTPUT"
+          printf '{"exit_code":%s,"error_code":"%s"}\n' "$result" "$error_code" > "$RUNNER_TEMP/npm-publish-result.json"
+          exit "$result"
+      - name: Verify registry content, channel and provenance
+        if: ${{ always() && steps.recheck.outcome == 'success' && steps.npm_publish.outcome != 'skipped' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FOTOR_PUBLISH_EXIT_CODE: ${{ steps.npm_publish.outputs.exit_code }}
+          FOTOR_PUBLISH_ERROR_CODE: ${{ steps.npm_publish.outputs.error_code }}
+        run: |
+          set +e
+          node .github/scripts/release-gate.mjs published "$VERSION" "$CHANNEL" "$RUNNER_TEMP/npm-artifact" --state "$RUNNER_TEMP/publication-state/publication-state.json" 2>&1 | tee "$RUNNER_TEMP/npm-verification.jsonl"
+          exit "${PIPESTATUS[0]}"
+      - name: Retain publication and verification results
+        if: ${{ always() && steps.npm_publish.outcome != 'skipped' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fotor-publication-result
+          path: |
+            ${{ runner.temp }}/npm-publish-result.json
+            ${{ runner.temp }}/npm-verification.jsonl
+          if-no-files-found: warn
+          retention-days: 7
