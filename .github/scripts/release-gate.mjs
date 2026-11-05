@@ -13,6 +13,13 @@ const WAIT_MS = 600_000;
 const POLL_MS = 15_000;
 const REQUEST_MS = 30_000;
 const versionPattern = /^\d+\.\d+\.\d+(?:-test\.[1-9]\d*)?$/;
+// The reviewed npm bootstrap archive from 2026-11-05, not a publishable plugin.
+// Accept only these bytes; another placeholder requires a new release decision.
+const bootstrapPlaceholder = Object.freeze({
+  version: '0.0.0-stage',
+  integrity: 'sha512-JnVyxuwC3pDTSvg0/oG23d9gFfkTTQQ4dGUDkFoME1bvnsOnmHufaSV/Hr6j4T2bD3FvkUj8G6vb3XMTbv7oXg==',
+  sha256: '5a8080a0b9daee361c6d1d9c68dc8046f8885cc57cb4c23142395253cf35a357',
+});
 
 class Processing extends Error {
   constructor(message, retryAfter = 0) { super(message); this.retryAfter = retryAfter; }
@@ -173,10 +180,22 @@ function checkLatest(metadata, selection, expected) {
   if (selection.channel !== 'next') return;
   assert.equal(metadata?.['dist-tags']?.latest ?? null, expected, 'latest changed from its approved baseline');
 }
-function checkPackageIdentity(metadata) {
+async function checkPackageIdentity(metadata, rt, deadline) {
   if (!metadata) return;
   assert(metadata.name === undefined || metadata.name === NAME, 'Wrong registry package');
-  assert(!metadata.versions?.['0.0.0-stage'], 'Unexpected bootstrap placeholder; obtain a release decision');
+  for (const [version, value] of Object.entries(metadata.versions || {})) {
+    if (version !== bootstrapPlaceholder.version) {
+      assert.match(version, versionPattern, 'Unexpected registry version; obtain a release decision');
+      continue;
+    }
+    assert(value?.name === NAME && value.version === version, 'Unexpected bootstrap placeholder identity');
+    assert.equal(value.dist?.integrity, bootstrapPlaceholder.integrity, 'Bootstrap placeholder integrity changed');
+    assert.equal(typeof value.dist?.tarball, 'string', 'Bootstrap placeholder tarball is missing');
+    const archive = await readRegistry(value.dist.tarball, rt, deadline, { bytes: true });
+    assert.equal(sha256(archive), bootstrapPlaceholder.sha256, 'Bootstrap placeholder archive changed');
+    assert.equal('sha512-' + createHash('sha512').update(archive).digest('base64'),
+      bootstrapPlaceholder.integrity, 'Bootstrap placeholder archive integrity changed');
+  }
 }
 function checkSource(selection, run) {
   assert.equal(run('git', ['rev-parse', 'HEAD']), selection.sha);
@@ -189,7 +208,7 @@ function checkSource(selection, run) {
 async function observedPublication({ selection, report, state, rt, deadline, provenance }) {
   const metadata = await readRegistry(registry + encodeURIComponent(NAME), rt, deadline, { absentAllowed: true });
   if (!metadata) throw new Processing('package is not yet publicly visible');
-  checkPackageIdentity(metadata);
+  await checkPackageIdentity(metadata, rt, deadline);
   checkLatest(metadata, selection, state.latest_before);
   if (selection.channel === 'latest') assert.equal(metadata['dist-tags']?.next ?? null, state.next_before, 'next changed during stable publication');
   const tag = metadata['dist-tags']?.[selection.channel];
@@ -257,7 +276,7 @@ export async function gate({ phase, version, channel, directory, state: stateFil
   assert.equal(manifest.name, NAME); assert.equal(manifest.version, version);
   if (phase === 'preflight') {
     const metadata = await readRegistry(registry + encodeURIComponent(NAME), rt, deadline, { absentAllowed: true });
-    checkPackageIdentity(metadata);
+    await checkPackageIdentity(metadata, rt, deadline);
     assertVersionAvailable(metadata, version);
     assert.equal(metadata?.['dist-tags']?.latest ?? null, approvedLatest(environment.EXPECTED_LATEST),
       'latest changed from its approved baseline');
