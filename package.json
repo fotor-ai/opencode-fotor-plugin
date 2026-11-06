@@ -1,6 +1,6 @@
 {
   "name": "@fotor-ai/opencode-fotor-plugin",
-  "version": "0.9.0-test.2",
+  "version": "0.9.0-test.3",
   "description": "Connect to the Fotor MCP service to create images, video and audio.",
   "author": {
     "name": "Fotor"

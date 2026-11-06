@@ -2,25 +2,45 @@
 
 <p align="center"><img src="assets/logo.svg" width="72" alt="Fotor logo" /></p>
 
-Version **0.9.0-test.2**, channel **test**. This package supports OpenCode
-v2. CLI and Desktop acceptance targets 2.2.5; other versions need their own
-verification. The independent distribution repository is
-[fotor-ai/opencode-fotor-plugin](https://github.com/fotor-ai/opencode-fotor-plugin), and the npm identity is
-`@fotor-ai/opencode-fotor-plugin`. Verify that the selected channel contains this
-version before installation; a generated snapshot alone does not publish it.
+<p align="center">
+  <img src="https://img.shields.io/static/v1?label=version&amp;message=0.9.0-test.3&amp;color=087f8c&amp;style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/static/v1?label=channel&amp;message=test&amp;color=a56800&amp;style=flat-square" alt="Release channel" />
+  <a href="LICENSE"><img src="https://img.shields.io/static/v1?label=license&amp;message=Apache-2.0&amp;color=57606a&amp;style=flat-square" alt="Apache-2.0 license" /></a>
+</p>
 
-## Capabilities and verification
+Create images, video and audio with Fotor in OpenCode Desktop and CLI through
+native HTTP MCP and OAuth. This complete root package is independently
+distributed from [fotor-ai/opencode-fotor-plugin](https://github.com/fotor-ai/opencode-fotor-plugin) and npm. Verify that
+the selected channel has actually been published before using its installation
+command.
 
-Six shared skills cover connection/model queries, images, video, audio, uploads
-and your own Fotor credit balance. A small reviewed server module registers
-them and the production MCP endpoint `https://mcp.fotor.com/mcp`. OpenCode owns native HTTP,
-OAuth, tool discovery and permissions. Skill files and their references contain
-no scripts. No bridge, GUI/TUI extension or installation hook is required.
+| Field | Value |
+| --- | --- |
+| Plugin | `fotor` |
+| Package | `@fotor-ai/opencode-fotor-plugin` |
+| Version | `0.9.0-test.3` |
+| Release channel | `test` |
+| Service environment | `production` |
+| MCP endpoint | `https://mcp.fotor.com/mcp` |
+| Client baselines | OpenCode v2 CLI and Desktop 2.2.5 |
+| License | [Apache-2.0](LICENSE) |
 
-New services expose direct tools without changing host execution timeouts.
-Matching user configuration remains authoritative; conflicting sources stop
-activation. Native installation, authorization, website access and media
-execution need separate evidence. See the
+## Features and verification
+
+The six skills cover connection/model queries, images, video, audio, uploads and
+your own Fotor credit balance. A small native server module registers the skills
+and Fotor MCP; OpenCode manages authorization, connections and permissions.
+Complete tool discovery respects user restrictions. Skills and their references
+remain script-free.
+
+New Fotor services use direct tools and keep the host's execution timeout.
+Matching user configuration keeps its settings; conflicting sources stop
+activation. No bridge, GUI/TUI extension or installation hook is required.
+
+Package checks cover files, references and configuration. Verify installation,
+authorization and calls, website access and media execution separately for the
+actual host and installed source. The tested 2.2.5 client baselines cover basic
+operations; real media generation has not been verified. See the
 [versioned host limitations](skills/fotor-connect/references/authentication.md#versioned-host-limitations).
 
 <a id="opencode"></a>
@@ -53,7 +73,7 @@ disable the complete plugin; inspect MCP connection status separately.
 
 ### Skills and connection
 
-Verify version **0.9.0-test.2**, current skill paths and one `fotor` service.
+Verify version **0.9.0-test.3**, current skill paths and one `fotor` service.
 Explicit skill selection uses `@fotor-connect`; model invocation uses the native
 `skill` tool's `id`. Read the selected skill's own reference files.
 
@@ -92,15 +112,27 @@ is configured directly; `plugin add` accepts npm/Git package targets. Keep the
 local source and rollback information when switching to a public channel.
 
 
-## Workflows and contents
+## Workflows
 
-Read the [MCP workflow](skills/fotor-connect/references/mcp-integration.md#runtime-workflow),
+Audio workflows cover soundtrack composition, new tracks, song editing, speech,
+podcasts and vocal separation. Consult the installed audio skill for the matching
+request.
+
+Read [MCP workflows](skills/fotor-connect/references/mcp-integration.md#runtime-workflow),
 [media preparation](skills/fotor-connect/references/media-upload.md) and
-[balance reference](skills/fotor-connect/references/credits.md) for your request.
-Every skill carries its own four runtime references.
+[your own Fotor credit balance](skills/fotor-connect/references/credits.md)
+for the matching request. Every skill carries its own four runtime references;
+no repository or sibling skill is needed to read them.
 
-The complete root package contains `package.json`, the reviewed `runtime/`,
-`skills/`, `assets/logo.svg`, this README and [LICENSE](LICENSE). The collection
-repository carries an external navigation entry, not another OpenCode package.
-Repository-only `.github/` files maintain publication and are excluded from the
-npm tarball. They are not installation hooks or plugin runtime entrypoints.
+## Contents and license
+
+- `package.json`: the native server plugin manifest and host SDK peer declaration.
+- `runtime/`: the reviewed server entry and generated skill registration.
+- `skills/`: six skills, each with four local reference documents.
+- `assets/logo.svg`, `README.md` and [LICENSE](LICENSE): package-local branding,
+  documentation and Apache-2.0 license.
+- Git snapshots additionally contain `.github/` publication tooling, excluded from
+  the npm tarball and plugin runtime.
+
+The multi-platform repository documents this external source rather than
+carrying another installable OpenCode copy.
