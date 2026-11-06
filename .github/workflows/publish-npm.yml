@@ -32,7 +32,8 @@ env:
   MODE: ${{ inputs.mode }}
   # OpenCode has no stable npm baseline yet. Unexpected bootstrap tags stop publication.
   # Change this value only through a reviewed decision after registry verification.
-  EXPECTED_LATEST: absent
+  # Reviewed first-publication state; next must not move this bootstrap latest.
+  EXPECTED_LATEST: 0.9.0-test.1
 jobs:
   build:
     runs-on: ubuntu-24.04
