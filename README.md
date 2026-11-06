@@ -2,7 +2,7 @@
 
 <p align="center"><img src="assets/logo.svg" width="72" alt="Fotor logo" /></p>
 
-Version **0.9.0-test.1**, channel **test**. This package supports OpenCode
+Version **0.9.0-test.2**, channel **test**. This package supports OpenCode
 v2. CLI and Desktop acceptance targets 2.2.5; other versions need their own
 verification. The independent distribution repository is
 [fotor-ai/opencode-fotor-plugin](https://github.com/fotor-ai/opencode-fotor-plugin), and the npm identity is
@@ -53,7 +53,7 @@ disable the complete plugin; inspect MCP connection status separately.
 
 ### Skills and connection
 
-Verify version **0.9.0-test.1**, current skill paths and one `fotor` service.
+Verify version **0.9.0-test.2**, current skill paths and one `fotor` service.
 Explicit skill selection uses `@fotor-connect`; model invocation uses the native
 `skill` tool's `id`. Read the selected skill's own reference files.
 
