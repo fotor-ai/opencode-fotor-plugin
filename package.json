@@ -1,0 +1,32 @@
+{
+  "name": "@fotor-ai/opencode-fotor-plugin",
+  "version": "0.9.0",
+  "description": "Connect to the Fotor MCP service to create images, video and audio.",
+  "author": {
+    "name": "Fotor"
+  },
+  "homepage": "https://www.fotor.com",
+  "repository": "https://github.com/fotor-ai/opencode-fotor-plugin",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./runtime/index.ts",
+    "./server": "./runtime/index.ts"
+  },
+  "files": [
+    "runtime",
+    "skills",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.2.5 <3"
+  },
+  "peerDependenciesMeta": {
+    "@opencode/plugin": {
+      "optional": true
+    }
+  }
+}
