@@ -3,7 +3,7 @@
 <p align="center"><img src="assets/logo.svg" width="72" alt="Fotor logo" /></p>
 
 <p align="center">
-  <img src="https://img.shields.io/static/v1?label=version&amp;message=0.9.0-test.3&amp;color=087f8c&amp;style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/static/v1?label=version&amp;message=0.9.1-test.1&amp;color=087f8c&amp;style=flat-square" alt="Version" />
   <img src="https://img.shields.io/static/v1?label=channel&amp;message=test&amp;color=a56800&amp;style=flat-square" alt="Release channel" />
   <a href="LICENSE"><img src="https://img.shields.io/static/v1?label=license&amp;message=Apache-2.0&amp;color=57606a&amp;style=flat-square" alt="Apache-2.0 license" /></a>
 </p>
@@ -18,7 +18,7 @@ command.
 | --- | --- |
 | Plugin | `fotor` |
 | Package | `@fotor-ai/opencode-fotor-plugin` |
-| Version | `0.9.0-test.3` |
+| Version | `0.9.1-test.1` |
 | Release channel | `test` |
 | Service environment | `production` |
 | MCP endpoint | `https://mcp.fotor.com/mcp` |
@@ -73,7 +73,7 @@ disable the complete plugin; inspect MCP connection status separately.
 
 ### Skills and connection
 
-Verify version **0.9.0-test.3**, current skill paths and one `fotor` service.
+Verify version **0.9.1-test.1**, current skill paths and one `fotor` service.
 Explicit skill selection uses `@fotor-connect`; model invocation uses the native
 `skill` tool's `id`. Read the selected skill's own reference files.
 
